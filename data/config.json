@@ -1,0 +1,28 @@
+{
+    "gif_links": {
+        "love_success": "https://media.tenor.com/-bT34mCszlUAAAAd/hearts-love.gif",
+        "love_fail": "https://media.tenor.com/XF3b4dyWj9sAAAAC/broken-heart.gif"
+    },
+    "shop_items": {
+        "🌸 Hoa": {
+            "price": 10,
+            "intimacy": 5
+        },
+        "🧸 Gấu bông": {
+            "price": 30,
+            "intimacy": 10
+        },
+        "📿 Dây chuyền": {
+            "price": 60,
+            "intimacy": 25
+        },
+        "💍 Nhẫn bạc": {
+            "price": 120,
+            "intimacy": 50
+        },
+        "💍💛 Nhẫn vàng": {
+            "price": 250,
+            "intimacy": 120
+        }
+    }
+}

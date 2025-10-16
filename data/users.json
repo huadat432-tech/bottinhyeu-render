@@ -1,0 +1,95 @@
+{
+    "605428359836598312": {
+        "xu": 447211,
+        "love_partner": 1421407727116091513,
+        "intimacy": 411,
+        "inventory": {
+            "💍💛 Nhẫn vàng": 201,
+            "🔮 Ngọc bích": 2,
+            "🌸 Hoa": 48,
+            "📿 Dây chuyền": 18,
+            "🧸 Gấu bông": 49,
+            "💎 Kim cương": 1,
+            "🥇 Vàng": 2
+        },
+        "materials": {
+            "💎 Kim cương": 1
+        },
+        "luck": 0,
+        "last_job": {},
+        "married": true
+    },
+    "691103182243233824": {
+        "xu": 200,
+        "love_partner": null,
+        "intimacy": 351,
+        "inventory": {},
+        "materials": {},
+        "luck": 0,
+        "last_job": {},
+        "married": true
+    },
+    "872104022964834354": {
+        "xu": 0,
+        "love_partner": null,
+        "intimacy": 0,
+        "inventory": {},
+        "materials": {},
+        "luck": 0,
+        "last_job": {}
+    },
+    "1421407727116091513": {
+        "xu": 125,
+        "love_partner": 605428359836598312,
+        "intimacy": 60,
+        "inventory": {
+            "🌸 Hoa": 1,
+            "🔮 Ngọc bích": 7,
+            "🥇 Vàng": 4,
+            "💎 Kim cương": 1
+        },
+        "materials": {},
+        "luck": 0,
+        "last_job": {}
+    },
+    "1080142829524897893": {
+        "xu": 7,
+        "love_partner": null,
+        "intimacy": 0,
+        "inventory": {
+            "💎 Kim cương": 1
+        },
+        "materials": {},
+        "luck": 0,
+        "last_job": {}
+    },
+    "1422852727763112048": {
+        "xu": 0,
+        "love_partner": null,
+        "intimacy": 0,
+        "inventory": {},
+        "materials": {},
+        "luck": 0,
+        "last_job": {}
+    },
+    "1371776038773981307": {
+        "xu": 38,
+        "love_partner": null,
+        "intimacy": 0,
+        "inventory": {
+            "🥇 Vàng": 3
+        },
+        "materials": {},
+        "luck": 0,
+        "last_job": {}
+    },
+    "1051663815772737608": {
+        "xu": 0,
+        "love_partner": null,
+        "intimacy": 0,
+        "inventory": {},
+        "materials": {},
+        "luck": 0,
+        "last_job": {}
+    }
+}
