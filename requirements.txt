@@ -1,5 +1,6 @@
-discord.py==2.4.0
+discord.py
 asyncio
 flask
 python-dotenv
 Pillow
+
