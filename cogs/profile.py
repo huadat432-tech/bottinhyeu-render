@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from utils.file_manager import get_user, update_user
 from utils.embeds import error_embed
+import os
 
 # Danh sách khung ảnh couple
 FRAMES_SHOP = {
