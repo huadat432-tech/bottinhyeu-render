@@ -55,11 +55,14 @@ class Profile(commands.Cog):
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
         """Khi bấm nút '👩‍❤️‍👨 Hồ sơ couple'"""
-        if not interaction.data or "custom_id" not in interaction.data:
-            return
-        
-        if interaction.data["custom_id"] == "profile":
-            await self.show_profile(interaction)
+        try:
+            if not interaction.data or "custom_id" not in interaction.data:
+                return
+            
+            if interaction.data["custom_id"] == "profile":
+                await self.show_profile(interaction)
+        except Exception as e:
+            print(f"❌ Lỗi interaction profile: {e}")
 
     async def show_profile(self, interaction: discord.Interaction):
         user_data = get_user(interaction.user.id)
@@ -71,6 +74,10 @@ class Profile(commands.Cog):
                 ephemeral=True
             )
             return
+
+        # Defer để tránh timeout
+        if not interaction.response.is_done():
+            await interaction.response.defer(ephemeral=False)
 
         partner_data = get_user(partner_id)
         partner_member = interaction.guild.get_member(partner_id)
@@ -163,7 +170,11 @@ class Profile(commands.Cog):
 
         embed.set_footer(text="💗 Tình yêu là điều kỳ diệu nhất 💗")
 
-        await interaction.response.send_message(embed=embed, ephemeral=False)
+        # Gửi message (dùng followup vì đã defer)
+        if interaction.response.is_done():
+            await interaction.followup.send(embed=embed, ephemeral=False)
+        else:
+            await interaction.response.send_message(embed=embed, ephemeral=False)
 
     def create_progress_bar(self, current, total, length=10):
         """Tạo thanh progress bar"""
@@ -171,9 +182,9 @@ class Profile(commands.Cog):
         bar = "█" * filled + "░" * (length - filled)
         return f"`{bar}`"
 
-    @commands.command(name="changeframe")
+    @commands.command(name="thaykhung")
     async def change_frame(self, ctx, frame_id: str = None):
-        """Đổi khung ảnh couple - Cả 2 người trong cặp đều có thể đổi"""
+        """Đổi khung ảnh couple - Hiển thị menu chọn khung"""
         user_data = get_user(ctx.author.id)
         partner_id = user_data.get("love_partner")
 
@@ -181,55 +192,106 @@ class Profile(commands.Cog):
             await ctx.send(embed=error_embed("💔 Bạn chưa có người yêu!"))
             return
 
-        if not frame_id:
-            # Hiển thị danh sách khung đã sở hữu
-            owned_frames = user_data.get("owned_frames", ["frame_basic"])
-            embed = discord.Embed(
-                title="🖼️ Khung ảnh đã sở hữu",
-                description="Dùng lệnh: `bzchangeframe <id>` để đổi khung",
-                color=0xFF69B4
-            )
-            
-            for frame_id in owned_frames:
-                frame = FRAMES_SHOP.get(frame_id)
-                if frame:
-                    embed.add_field(
-                        name=frame["name"],
-                        value=f"ID: `{frame_id}`",
-                        inline=True
-                    )
-            
-            await ctx.send(embed=embed)
-            return
-
-        # Kiểm tra xem có sở hữu khung này không
+        # Hiển thị menu chọn khung
         owned_frames = user_data.get("owned_frames", ["frame_basic"])
-        if frame_id not in owned_frames:
-            await ctx.send(embed=error_embed(f"❌ Bạn chưa sở hữu khung này! Hãy mua tại shop."))
-            return
+        current_frame = user_data.get("current_frame", "frame_basic")
+        
+        embed = discord.Embed(
+            title="🖼️ Thay Khung Ảnh Couple",
+            description=f"Khung hiện tại: **{FRAMES_SHOP.get(current_frame, FRAMES_SHOP['frame_basic'])['name']}**\n\n"
+                        "Chọn khung bạn muốn sử dụng bên dưới:",
+            color=0xFF69B4
+        )
+        
+        # Hiển thị các khung đã sở hữu
+        for frame_id in owned_frames:
+            frame = FRAMES_SHOP.get(frame_id)
+            if frame:
+                status = "✅ Đang dùng" if frame_id == current_frame else ""
+                embed.add_field(
+                    name=f"{frame['name']} {status}",
+                    value=f"ID: `{frame_id}`",
+                    inline=True
+                )
+        
+        view = ChangeFrameView(ctx.author.id, owned_frames, current_frame)
+        await ctx.send(embed=embed, view=view)
 
-        if frame_id not in FRAMES_SHOP:
-            await ctx.send(embed=error_embed(f"❌ Khung `{frame_id}` không tồn tại!"))
-            return
 
+class ChangeFrameView(discord.ui.View):
+    """View để chọn khung ảnh"""
+    def __init__(self, user_id, owned_frames, current_frame):
+        super().__init__(timeout=60)
+        self.user_id = user_id
+        self.current_frame = current_frame
+        
+        # Tạo select menu với các khung đã sở hữu
+        options = []
+        for frame_id in owned_frames:
+            frame = FRAMES_SHOP.get(frame_id)
+            if frame:
+                is_current = "✅ " if frame_id == current_frame else ""
+                options.append(
+                    discord.SelectOption(
+                        label=f"{is_current}{frame['name']}",
+                        value=frame_id,
+                        description=frame['description'][:100],
+                        emoji="🖼️"
+                    )
+                )
+        
+        if options:
+            self.add_item(FrameSelectMenu(options, user_id))
+
+class FrameSelectMenu(discord.ui.Select):
+    """Select menu để chọn khung"""
+    def __init__(self, options, user_id):
+        super().__init__(
+            placeholder="🖼️ Chọn khung bạn muốn sử dụng...",
+            options=options,
+            min_values=1,
+            max_values=1
+        )
+        self.user_id = user_id
+    
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Đây không phải menu của bạn!", ephemeral=True)
+            return
+        
+        selected_frame = self.values[0]
+        
+        # Lấy dữ liệu user
+        user_data = get_user(interaction.user.id)
+        partner_id = user_data.get("love_partner")
+        
+        if not partner_id:
+            await interaction.response.send_message(
+                embed=error_embed("💔 Bạn chưa có người yêu!"),
+                ephemeral=True
+            )
+            return
+        
         # Đổi khung cho cả 2 người
-        user_data["current_frame"] = frame_id
-        save_user(ctx.author.id, user_data)
+        user_data["current_frame"] = selected_frame
+        save_user(interaction.user.id, user_data)
 
         partner_data = get_user(partner_id)
-        partner_data["current_frame"] = frame_id
+        partner_data["current_frame"] = selected_frame
         save_user(partner_id, partner_data)
 
-        frame_name = FRAMES_SHOP[frame_id]["name"]
+        frame = FRAMES_SHOP[selected_frame]
         
         embed = discord.Embed(
             title="✅ Đổi khung thành công!",
-            description=f"Đã đổi khung couple thành {frame_name}",
+            description=f"Đã đổi khung couple thành **{frame['name']}**\n"
+                        f"Khung đã được áp dụng cho cả 2 người! 💖",
             color=0x00FF00
         )
-        embed.set_image(url=FRAMES_SHOP[frame_id]["url"])
+        embed.set_image(url=frame["url"])
+        embed.set_footer(text="💕 Hãy xem hồ sơ couple để thấy khung mới!")
         
-        await ctx.send(embed=embed)
+        await interaction.response.edit_message(embed=embed, view=None)
 
 async def setup(bot):
     await bot.add_cog(Profile(bot))
