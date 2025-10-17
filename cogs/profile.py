@@ -71,13 +71,6 @@ class Profile(commands.Cog):
             # Ghép avatar phải (vị trí: 390, 20)
             base_rgba.paste(partner_img, (390, 20), partner_img)
 
-            # Ghép frame đè lên cùng
-            try:
-                frame_img = Image.open("images/frame_basic.png").convert("RGBA").resize((600, 200), Image.Resampling.LANCZOS)
-                base_rgba = Image.alpha_composite(base_rgba, frame_img)
-            except Exception as e:
-                print(f"Không tìm thấy frame: {e}")
-
             # Chuyển về RGB để lưu
             base_rgba = base_rgba.convert("RGB")
 
