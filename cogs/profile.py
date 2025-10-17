@@ -101,8 +101,10 @@ class Profile(commands.Cog):
             # Trạng thái mối quan hệ
             if user_data.get("married"):
                 status = "💍 Đã kết hôn"
+                status_color = 0xFFD700
             else:
                 status = "💘 Đang hẹn hò"
+                status_color = 0xFF1493
 
             # Tính cấp độ tình yêu
             intimacy = user_data.get("intimacy", 0)
@@ -110,18 +112,20 @@ class Profile(commands.Cog):
             progress = intimacy % 100
             progress_bar = self.create_progress_bar(progress, 100)
 
-            # Tạo embed
+            # Tạo embed chính
             embed = discord.Embed(
                 title="💖 HỒ SƠ CẶP ĐÔI 💖",
-                description=f"👫 **{user_member.name}** 💕 **{partner_member.name}**",
-                color=0xFF1493
+                description=f"👨‍❤️‍👨 **{user_member.name}** 💕 **{partner_member.name}**\n\n{status}",
+                color=status_color
             )
             
-            # Hiển thị khung ảnh
+            # Hiển thị khung ảnh GIF
             embed.set_image(url=frame_url)
             
-            # Avatar
+            # Avatar trái
             embed.set_thumbnail(url=user_member.avatar.url if user_member.avatar else "")
+            
+            # Tên tác giả với avatar phải
             embed.set_author(
                 name=f"{user_member.name} 💕 {partner_member.name}",
                 icon_url=partner_member.avatar.url if partner_member.avatar else ""
@@ -130,19 +134,13 @@ class Profile(commands.Cog):
             # Thông tin chi tiết
             embed.add_field(
                 name="💞 Cấp độ tình yêu",
-                value=f"**Level {level}** ⭐\n{progress_bar} {progress}/100",
+                value=f"**Level {level}** ⭐\n{progress_bar}\n{progress}/100 điểm",
                 inline=False
             )
 
             embed.add_field(
                 name="💓 Điểm thân mật",
-                value=f"**{intimacy}** điểm",
-                inline=True
-            )
-
-            embed.add_field(
-                name="📜 Trạng thái",
-                value=status,
+                value=f"**{intimacy}** 💕",
                 inline=True
             )
 
@@ -154,20 +152,20 @@ class Profile(commands.Cog):
 
             embed.add_field(
                 name=f"💰 Xu của {user_member.name}",
-                value=f"{user_data.get('xu', 0)} xu",
+                value=f"**{user_data.get('xu', 0)}** xu",
                 inline=True
             )
 
             embed.add_field(
                 name=f"💰 Xu của {partner_member.name}",
-                value=f"{partner_data.get('xu', 0)} xu",
+                value=f"**{partner_data.get('xu', 0)}** xu",
                 inline=True
             )
 
             gifts_given = user_data.get("gifts_given", 0)
             embed.add_field(
                 name="🎁 Quà đã tặng",
-                value=f"{gifts_given} món",
+                value=f"**{gifts_given}** món",
                 inline=True
             )
 
