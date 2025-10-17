@@ -7,6 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 import io
 import requests
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 # Danh sách khung ảnh couple
 FRAMES_SHOP = {
@@ -124,8 +125,11 @@ class Profile(commands.Cog):
             partner_avatar_url = partner_member.avatar.url if partner_member and partner_member.avatar else None
             
             # Tạo ảnh profile với khung
-            profile_image = await self.create_profile_image(
-                user_avatar_url, 
+            loop = asyncio.get_event_loop()
+            profile_image = await loop.run_in_executor(
+                None,
+                self.create_profile_image_sync,
+                user_avatar_url,
                 partner_avatar_url,
                 user_member.name if user_member else "User",
                 partner_member.name if partner_member else "Partner",
@@ -205,7 +209,7 @@ class Profile(commands.Cog):
             except Exception as e2:
                 print(f"❌ Lỗi gửi error message: {e2}")
 
-    async def create_profile_image(self, user_avatar_url, partner_avatar_url, user_name, partner_name, status, intimacy, frame_color):
+    def create_profile_image_sync(self, user_avatar_url, partner_avatar_url, user_name, partner_name, status, intimacy, frame_color):
         """Tạo ảnh profile với 2 avatar và khung"""
         try:
             # Kích thước canvas
