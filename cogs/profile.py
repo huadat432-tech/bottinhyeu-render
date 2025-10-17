@@ -79,18 +79,20 @@ class Profile(commands.Cog):
         partner_id = user_data.get("love_partner")
         
         if not partner_id:
-            await interaction.response.send_message(
-                embed=error_embed("💔 Bạn chưa có người yêu! Hãy tỏ tình trước đã nhé 💌"),
-                ephemeral=True
-            )
+            try:
+                await interaction.response.send_message(
+                    embed=error_embed("💔 Bạn chưa có người yêu! Hãy tỏ tình trước đã nhé 💌"),
+                    ephemeral=True
+                )
+            except:
+                pass
             return
 
         # Defer để tránh timeout
         try:
-            if not interaction.response.is_done():
-                await interaction.response.defer(ephemeral=False)
-        except:
-            pass
+            await interaction.response.defer(ephemeral=False)
+        except Exception as e:
+            print(f"⚠️ Lỗi defer: {e}")
 
         try:
             partner_data = get_user(partner_id)
@@ -183,10 +185,7 @@ class Profile(commands.Cog):
             embed.set_footer(text="💗 Tình yêu là điều kỳ diệu nhất 💗")
 
             # Gửi message
-            if interaction.response.is_done():
-                await interaction.followup.send(embed=embed, file=file, ephemeral=False)
-            else:
-                await interaction.response.send_message(embed=embed, file=file, ephemeral=False)
+            await interaction.followup.send(embed=embed, file=file, ephemeral=False)
                 
         except asyncio.TimeoutError:
             try:
@@ -194,23 +193,17 @@ class Profile(commands.Cog):
                     embed=error_embed("⏰ Quá lâu để tạo profile, vui lòng thử lại!"),
                     ephemeral=True
                 )
-            except:
-                pass
+            except Exception as e:
+                print(f"❌ Lỗi gửi timeout message: {e}")
         except Exception as e:
             print(f"❌ Lỗi tạo ảnh profile: {e}")
             try:
-                if interaction.response.is_done():
-                    await interaction.followup.send(
-                        embed=error_embed(f"❌ Lỗi hiển thị profile: {str(e)[:100]}"),
-                        ephemeral=True
-                    )
-                else:
-                    await interaction.response.send_message(
-                        embed=error_embed(f"❌ Lỗi hiển thị profile: {str(e)[:100]}"),
-                        ephemeral=True
-                    )
-            except:
-                pass
+                await interaction.followup.send(
+                    embed=error_embed(f"❌ Lỗi hiển thị profile: {str(e)[:100]}"),
+                    ephemeral=True
+                )
+            except Exception as e2:
+                print(f"❌ Lỗi gửi error message: {e2}")
 
     async def create_profile_image(self, user_avatar_url, partner_avatar_url, user_name, partner_name, status, intimacy, frame_color):
         """Tạo ảnh profile với 2 avatar và khung"""
