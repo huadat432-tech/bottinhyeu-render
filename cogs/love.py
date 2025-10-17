@@ -6,7 +6,7 @@ import random
 from utils.file_manager import get_user, update_user, load_data, save_data
 from utils.embeds import love_embed, success_embed, error_embed
 
-
+# Class xử lý lời tỏ tình
 class SetLoveView(View):
     """View gồm nút chấp nhận / từ chối lời tỏ tình"""
     def __init__(self, lover_id, target_id):
@@ -65,7 +65,7 @@ class SetLoveView(View):
         embed.set_image(url=gif_url)
         await interaction.response.edit_message(embed=embed, view=None)
 
-
+# Class xử lý chia tay
 class BreakUpView(View):
     """View gồm nút đồng ý chia tay / suy nghĩ lại"""
     def __init__(self, lover_id, partner_id):
@@ -112,7 +112,7 @@ class BreakUpView(View):
 
         await interaction.response.send_message("💖 Quyết định chưa được thực hiện. Hãy suy nghĩ kỹ trước khi chia tay!", ephemeral=True)
 
-
+# Class xử lý kết hôn
 class MarryView(View):
     """View kết hôn"""
     def __init__(self, proposer_id, partner_id):
@@ -160,7 +160,7 @@ class MarryView(View):
         embed = love_embed(f"💔 **<@{self.partner_id}>** đã từ chối lời cầu hôn của **<@{self.proposer_id}>**...")
         await interaction.response.edit_message(embed=embed, view=None)
 
-
+# Class Love (Tỏ tình, chia tay, kết hôn)
 class Love(commands.Cog):
     """Xử lý tỏ tình, chấp nhận, từ chối, chia tay và kết hôn"""
     def __init__(self, bot):
@@ -172,4 +172,31 @@ class Love(commands.Cog):
 
     @commands.command(name="bzlove")
     async def confess_love(self, ctx, target: discord.Member = None):
-        """Tỏ tình
+        """Tỏ tình với một người nào đó"""
+        if target is None:
+            await ctx.send("❌ Bạn chưa chỉ định người tỏ tình! Ví dụ: `!bzlove @thanhvien`")
+            return
+        
+        # Lấy dữ liệu người tỏ tình và người được tỏ tình
+        user_data = load_data()
+        lover_id = ctx.author.id
+        target_id = target.id
+
+        # Kiểm tra xem người tỏ tình có đang có người yêu hay không
+        if user_data.get(str(lover_id), {}).get("love_partner"):
+            await ctx.send("💔 Bạn đã có người yêu rồi, không thể tỏ tình với người khác!")
+            return
+        
+        # Kiểm tra nếu người được tỏ tình đã có người yêu
+        if user_data.get(str(target_id), {}).get("love_partner"):
+            await ctx.send(f"💔 {target.mention} đã có người yêu rồi!")
+            return
+        
+        # Tạo View tỏ tình
+        view = SetLoveView(lover_id=lover_id, target_id=target_id)
+        
+        # Tạo thông điệp tỏ tình
+        embed = love_embed(f"**{ctx.author.mention}** muốn tỏ tình với **{target.mention}**! Bạn có chấp nhận không?")
+        await ctx.send(embed=embed, view=view)
+
+    # Các lệnh khác như chia tay, kết hôn sẽ xử lý theo cách tương tự
