@@ -2,17 +2,33 @@ import discord
 from discord.ext import commands
 import os
 from dotenv import load_dotenv
+from flask import Flask
+from threading import Thread
+
+# ==========================
+#  FLASK WEB SERVER (Keep Alive)
+# ==========================
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "✅ Bot đang chạy!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
 
 # ==========================
 #  KHỞI TẠO BOT
 # ==========================
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
-
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-
 bot = commands.Bot(command_prefix="bz", intents=intents)
 
 # ==========================
@@ -22,12 +38,13 @@ bot = commands.Bot(command_prefix="bz", intents=intents)
 async def on_ready():
     print(f"✅ Bot đã sẵn sàng dưới tên: {bot.user}")
     print("📜 Đang load các cogs...")
-
     for filename in os.listdir("./cogs"):
         if filename.endswith(".py"):
-            await bot.load_extension(f"cogs.{filename[:-3]}")
-            print(f"✅ Đã load: {filename}")
-
+            try:
+                await bot.load_extension(f"cogs.{filename[:-3]}")
+                print(f"✅ Đã load: {filename}")
+            except Exception as e:
+                print(f"❌ Lỗi khi load {filename}: {e}")
     print("✨ Tất cả cogs đã sẵn sàng!")
 
 # ==========================
@@ -37,7 +54,6 @@ async def on_ready():
 async def menu_command(ctx):
     from utils.embeds import base_embed
     from discord.ui import View, Button
-
     embed = base_embed(
         "💘 Menu Tình Yêu 💘",
         "Chọn tính năng bên dưới nhé!\n\n"
@@ -60,7 +76,6 @@ async def menu_command(ctx):
     view.add_item(Button(label="🎁 Tặng quà", style=discord.ButtonStyle.primary, custom_id="gift"))
     view.add_item(Button(label="💍 Cưới", style=discord.ButtonStyle.danger, custom_id="marry"))
     view.add_item(Button(label="👩‍❤️‍👨 Hồ sơ couple", style=discord.ButtonStyle.secondary, custom_id="profile"))
-
     await ctx.send(embed=embed, view=view)
 
 # ==========================
@@ -77,7 +92,7 @@ async def sync(ctx):
 # ==========================
 bot.remove_command("help")
 
-import os
-TOKEN = os.getenv("DISCORD_TOKEN")
-bot.run(TOKEN)
-
+if __name__ == "__main__":
+    keep_alive()  # Khởi động Flask server
+    TOKEN = os.getenv("DISCORD_TOKEN")
+    bot.run(TOKEN)
