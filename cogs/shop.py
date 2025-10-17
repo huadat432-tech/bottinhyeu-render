@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord.ui import View, Button, Select
 import json
-from utils.file_manager import get_user, update_user
+from utils.file_manager import get_user, update_user, load_data, save_data
 from utils.embeds import success_embed, error_embed, base_embed
 
 # ==============================
