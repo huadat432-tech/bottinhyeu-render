@@ -352,6 +352,7 @@ async def open_inventory(interaction: discord.Interaction):
     user = get_user(interaction.user.id)
     inventory = user.get("inventory", {})
     owned_frames = user.get("owned_frames", ["frame_basic"])
+    current_frame = user.get("current_frame", "frame_basic")
 
     embed = discord.Embed(
         title="🎒 TỦ ĐỒ CỦA BẠN",
@@ -368,14 +369,126 @@ async def open_inventory(interaction: discord.Interaction):
 
     # Hiển thị khung ảnh
     if owned_frames:
-        frames_text = "\n".join([f"🖼️ {FRAMES_SHOP.get(f, {'name': f})['name']}" for f in owned_frames if f != "frame_basic"])
-        if not frames_text:
-            frames_text = "🖼️ Khung Cơ Bản (mặc định)"
+        frames_list = []
+        for f in owned_frames:
+            frame = FRAMES_SHOP.get(f)
+            if frame:
+                status = "✅ Đang dùng" if f == current_frame else ""
+                frames_list.append(f"🖼️ {frame['name']} {status}")
+        
+        frames_text = "\n".join(frames_list) if frames_list else "🖼️ Khung Cơ Bản (mặc định)"
         embed.add_field(name="🖼️ Khung Ảnh", value=frames_text, inline=False)
 
-    embed.set_footer(text="💡 Dùng bzchangeframe <id> để đổi khung ảnh")
+    embed.set_footer(text="💡 Bấm nút 'Thay khung' để đổi khung ảnh couple")
     
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    # Thêm nút thay khung nếu có nhiều hơn 1 khung
+    view = None
+    if len(owned_frames) > 1:
+        view = InventoryView(interaction.user.id, owned_frames, current_frame)
+    
+    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+
+class InventoryView(discord.ui.View):
+    """View cho tủ đồ với nút thay khung"""
+    def __init__(self, user_id, owned_frames, current_frame):
+        super().__init__(timeout=60)
+        self.user_id = user_id
+        self.owned_frames = owned_frames
+        self.current_frame = current_frame
+    
+    @discord.ui.button(label="🖼️ Thay khung", style=discord.ButtonStyle.primary)
+    async def change_frame_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Đây không phải tủ đồ của bạn!", ephemeral=True)
+            return
+        
+        # Hiển thị menu chọn khung
+        embed = discord.Embed(
+            title="🖼️ Thay Khung Ảnh Couple",
+            description=f"Khung hiện tại: **{FRAMES_SHOP.get(self.current_frame, FRAMES_SHOP['frame_basic'])['name']}**\n\n"
+                        "Chọn khung bạn muốn sử dụng:",
+            color=0xFF69B4
+        )
+        
+        view = ChangeFrameSelectView(self.user_id, self.owned_frames, self.current_frame)
+        await interaction.response.edit_message(embed=embed, view=view)
+
+
+class ChangeFrameSelectView(discord.ui.View):
+    """View với select menu để chọn khung"""
+    def __init__(self, user_id, owned_frames, current_frame):
+        super().__init__(timeout=60)
+        self.user_id = user_id
+        
+        # Tạo select menu
+        options = []
+        for frame_id in owned_frames:
+            frame = FRAMES_SHOP.get(frame_id)
+            if frame:
+                is_current = "✅ " if frame_id == current_frame else ""
+                options.append(
+                    discord.SelectOption(
+                        label=f"{is_current}{frame['name']}",
+                        value=frame_id,
+                        description=frame['description'][:100],
+                        emoji="🖼️"
+                    )
+                )
+        
+        if options:
+            self.add_item(InventoryFrameSelect(options, user_id))
+
+
+class InventoryFrameSelect(discord.ui.Select):
+    """Select menu để chọn khung từ tủ đồ"""
+    def __init__(self, options, user_id):
+        super().__init__(
+            placeholder="🖼️ Chọn khung bạn muốn sử dụng...",
+            options=options,
+            min_values=1,
+            max_values=1
+        )
+        self.user_id = user_id
+    
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("❌ Đây không phải menu của bạn!", ephemeral=True)
+            return
+        
+        selected_frame = self.values[0]
+        
+        # Lấy dữ liệu user
+        user_data = get_user(interaction.user.id)
+        partner_id = user_data.get("love_partner")
+        
+        if not partner_id:
+            await interaction.response.send_message(
+                embed=error_embed("💔 Bạn chưa có người yêu!"),
+                ephemeral=True
+            )
+            return
+        
+        # Đổi khung cho cả 2 người
+        user_data["current_frame"] = selected_frame
+        update_user(interaction.user.id, user_data)
+
+        partner_data = get_user(partner_id)
+        partner_data["current_frame"] = selected_frame
+        update_user(partner_id, partner_data)
+
+        frame = FRAMES_SHOP[selected_frame]
+        
+        embed = discord.Embed(
+            title="✅ Đổi khung thành công!",
+            description=f"Đã đổi khung couple thành **{frame['name']}**\n"
+                        f"Khung đã được áp dụng cho cả 2 người! 💖",
+            color=0x00FF00
+        )
+        embed.set_image(url=frame["url"])
+        embed.set_footer(text="💕 Hãy xem hồ sơ couple để thấy khung mới!")
+        
+        await interaction.response.edit_message(embed=embed, view=None)
 
 # ==============================
 #  COG CHÍNH
