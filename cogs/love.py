@@ -170,6 +170,47 @@ class Love(commands.Cog):
     async def on_ready(self):
         print("💌 love.py đã được load")
 
+    @commands.command(name="bzlove")
+    async def confess_love(self, ctx, target: discord.Member = None):
+        """Tỏ tình cho người bạn thích - bzlove @user"""
+        
+        if not target:
+            await ctx.send(embed=error_embed("❌ Dùng: `bzlove @user`\n\nVí dụ: `bzlove @người_thích`"))
+            return
+
+        if target.id == ctx.author.id:
+            await ctx.send(embed=error_embed("❌ Không thể tỏ tình cho chính bạn! 😅"))
+            return
+
+        if target.bot:
+            await ctx.send(embed=error_embed("❌ Không thể tỏ tình cho bot! 🤖"))
+            return
+
+        # Kiểm tra xem 2 người đã hẹn hò hay chưa
+        data = load_data()
+        user_id = str(ctx.author.id)
+        target_id = str(target.id)
+
+        if data[user_id].get("love_partner"):
+            await ctx.send(embed=error_embed(f"❌ Bạn đã có người yêu rồi! 💔\n\nNgười yêu hiện tại: <@{data[user_id]['love_partner']}>"))
+            return
+
+        if data[target_id].get("love_partner"):
+            await ctx.send(embed=error_embed(f"❌ {target.mention} đã có người yêu rồi! 💔"))
+            return
+
+        # Tỏ tình
+        embed = discord.Embed(
+            title="💌 LỜI TỎ TÌNH 💌",
+            description=f"{ctx.author.mention} vừa tỏ tình với {target.mention}! 💕\n\n"
+                        f"👇 {target.mention}, bạn có chấp nhận không?",
+            color=0xFF1493
+        )
+        embed.set_image(url="https://media.tenor.com/-bT34mCszlUAAAAd/hearts-love.gif")
+
+        view = SetLoveView(ctx.author.id, target.id)
+        await ctx.send(embed=embed, view=view)
+
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
         """Xử lý khi bấm nút từ menu chính"""
