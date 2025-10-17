@@ -4,6 +4,9 @@ from utils.file_manager import get_user
 from utils.embeds import error_embed
 import random
 from datetime import datetime
+from PIL import Image, ImageDraw
+import io
+import aiohttp
 
 COUPLE_FRAMES = [
     "https://media.tenor.com/GFJg0P5OljEAAAAC/love-couple.gif",
@@ -28,12 +31,68 @@ class Profile(commands.Cog):
         if interaction.data["custom_id"] == "profile":
             await self.show_profile(interaction)
 
+    async def create_couple_image(self, user_member, partner_member):
+        """Tạo hình ghép avatar 2 người với trái tim giữa"""
+        try:
+            # Tải avatar
+            user_avatar_data = await self.download_image(user_member.avatar.url if user_member.avatar else user_member.default_avatar.url)
+            partner_avatar_data = await self.download_image(partner_member.avatar.url if partner_member.avatar else partner_member.default_avatar.url)
+
+            user_img = Image.open(io.BytesIO(user_avatar_data)).convert("RGBA").resize((180, 180), Image.Resampling.LANCZOS)
+            partner_img = Image.open(io.BytesIO(partner_avatar_data)).convert("RGBA").resize((180, 180), Image.Resampling.LANCZOS)
+
+            # Tạo hình nền (gradient lãng mạn)
+            base = Image.new("RGB", (600, 200), color=(255, 240, 245))
+            
+            # Vẽ avatar trái (vị trí: 40, 10)
+            base.paste(user_img, (40, 10), user_img)
+            
+            # Vẽ avatar phải (vị trí: 380, 10)
+            base.paste(partner_img, (380, 10), partner_img)
+
+            # Vẽ trái tim giữa ở giữa
+            draw = ImageDraw.Draw(base)
+            heart_x, heart_y = 300, 100
+            self.draw_heart(draw, heart_x, heart_y, 50, fill=(255, 105, 180), outline=(255, 20, 147), width=4)
+
+            # Lưu vào bytes
+            img_bytes = io.BytesIO()
+            base.save(img_bytes, format="PNG")
+            img_bytes.seek(0)
+            return img_bytes
+
+        except Exception as e:
+            print(f"Lỗi tạo hình: {e}")
+            return None
+
+    async def download_image(self, url):
+        """Tải hình từ URL"""
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                return await resp.read()
+
+    def draw_heart(self, draw, x, y, size, fill, outline, width):
+        """Vẽ hình trái tim"""
+        points = []
+        for i in range(360):
+            angle = i * 0.01745
+            # Công thức vẽ trái tim
+            px = 16 * (angle - 0.5) ** 3
+            py = 13 * angle - 5 * (angle ** 2)
+            points.append((x + px * size / 20, y + py * size / 20))
+        
+        if len(points) > 2:
+            draw.polygon(points, fill=fill)
+            draw.line(points + [points[0]], fill=outline, width=width)
+
     async def show_profile(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        
         user_data = get_user(interaction.user.id)
         partner_id = user_data.get("love_partner")
         
         if not partner_id:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=error_embed("💔 Bạn chưa có người yêu! Hãy tỏ tình trước đã nhé 💌"),
                 ephemeral=True
             )
@@ -54,31 +113,29 @@ class Profile(commands.Cog):
             status = "💘 Đang hẹn hò"
             status_color = 0xFF69B4
 
-        # Lấy ảnh khung đôi ngẫu nhiên
-        frame = random.choice(COUPLE_FRAMES)
+        # Tạo hình ghép
+        couple_image = await self.create_couple_image(user_member, partner_member)
 
-        # Tạo Embed chuyên nghiệp
+        # Tạo Embed cân đối
         embed = discord.Embed(
             title="✨ HỒ SƠ CẶP ĐÔI ✨",
             color=status_color,
             timestamp=datetime.now()
         )
 
-        # Header với tên hai người
-        embed.description = (
-            f"```\n"
-            f"{user_member.name} 💕 {partner_member.name}\n"
-            f"```"
-        )
+        # Hình trái tim + avatar ở trên
+        if couple_image:
+            file = discord.File(couple_image, filename="couple.png")
+            embed.set_image(url="attachment://couple.png")
 
-        # Phần trạng thái
+        # Thông tin trạng thái
         embed.add_field(
-            name="👑 Trạng thái quan hệ",
+            name="👑 Trạng thái",
             value=status,
             inline=False
         )
 
-        # Thống kê tình yêu
+        # Thống kê cân đối 2 cột
         embed.add_field(
             name="💞 Điểm thân mật",
             value=f"`{user_data['intimacy']}` ⭐",
@@ -91,42 +148,33 @@ class Profile(commands.Cog):
             inline=True
         )
 
+        # Xu của 2 người
         embed.add_field(
-            name="💎 Tổng xu yêu",
-            value=f"`{user_data['xu'] + partner_data['xu']}` xu 💰",
-            inline=True
-        )
-
-        # Chi tiết từng người
-        embed.add_field(
-            name=f"👤 {user_member.name}",
-            value=f"**Xu:** `{user_data['xu']}`\n**Cấp độ:** `Lv. {user_data.get('level', 1)}`",
+            name=f"💰 {user_member.name}",
+            value=f"`{user_data['xu']}` xu",
             inline=True
         )
 
         embed.add_field(
-            name=f"👤 {partner_member.name}",
-            value=f"**Xu:** `{partner_data['xu']}`\n**Cấp độ:** `Lv. {partner_data.get('level', 1)}`",
+            name=f"💰 {partner_member.name}",
+            value=f"`{partner_data['xu']}` xu",
             inline=True
         )
 
-        # Khung hình
-        embed.set_image(url=frame)
-
-        # Avatar
-        if user_member.avatar and partner_member.avatar:
-            embed.set_thumbnail(url=user_member.avatar.url)
-            embed.set_author(
-                name=f"{user_member.name} 💕 {partner_member.name}",
-                icon_url=partner_member.avatar.url
-            )
-
-        embed.set_footer(
-            text="💗 Yêu thương và được yêu là hạnh phúc | Hồ sơ cặp đôi",
-            icon_url=interaction.guild.icon.url if interaction.guild.icon else None
+        # Tổng cộng
+        embed.add_field(
+            name="✨ Tổng cộng",
+            value=f"`{user_data['xu'] + partner_data['xu']}` xu 💎",
+            inline=False
         )
 
-        await interaction.response.send_message(embed=embed, ephemeral=False)
+        embed.set_footer(text="💗 Yêu thương là hạnh phúc lớn nhất")
+
+        # Gửi
+        if couple_image:
+            await interaction.followup.send(embed=embed, file=file, ephemeral=False)
+        else:
+            await interaction.followup.send(embed=embed, ephemeral=False)
 
 async def setup(bot):
     await bot.add_cog(Profile(bot))
