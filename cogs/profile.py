@@ -55,6 +55,13 @@ class Profile(commands.Cog):
             heart_x, heart_y = 300, 100
             self.draw_heart(draw, heart_x, heart_y, 50, fill=(255, 105, 180), outline=(255, 20, 147), width=4)
 
+            # Ghép frame đè lên
+            try:
+                frame_img = Image.open("images/frame_basic.png").convert("RGBA").resize((600, 200), Image.Resampling.LANCZOS)
+                base = Image.alpha_composite(base.convert("RGBA"), frame_img).convert("RGB")
+            except Exception as e:
+                print(f"Không tìm thấy frame: {e}")
+
             # Lưu vào bytes
             img_bytes = io.BytesIO()
             base.save(img_bytes, format="PNG")
