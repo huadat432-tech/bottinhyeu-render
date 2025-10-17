@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from utils.file_manager import get_user, save_user
+from utils.file_manager import get_user, update_user
 from utils.embeds import error_embed
 import random
 
@@ -274,11 +274,11 @@ class FrameSelectMenu(discord.ui.Select):
         
         # Đổi khung cho cả 2 người
         user_data["current_frame"] = selected_frame
-        save_user(interaction.user.id, user_data)
+        update_user(interaction.user.id, user_data)
 
         partner_data = get_user(partner_id)
         partner_data["current_frame"] = selected_frame
-        save_user(partner_id, partner_data)
+        update_user(partner_id, partner_data)
 
         frame = FRAMES_SHOP[selected_frame]
         
@@ -292,6 +292,7 @@ class FrameSelectMenu(discord.ui.Select):
         embed.set_footer(text="💕 Hãy xem hồ sơ couple để thấy khung mới!")
         
         await interaction.response.edit_message(embed=embed, view=None)
+
 
 async def setup(bot):
     await bot.add_cog(Profile(bot))
