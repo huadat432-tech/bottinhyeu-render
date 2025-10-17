@@ -41,8 +41,8 @@ class Profile(commands.Cog):
             user_img = Image.open(io.BytesIO(user_avatar_data)).convert("RGBA").resize((180, 180), Image.Resampling.LANCZOS)
             partner_img = Image.open(io.BytesIO(partner_avatar_data)).convert("RGBA").resize((180, 180), Image.Resampling.LANCZOS)
 
-            # Tạo hình nền (gradient lãng mạn)
-            base = Image.new("RGB", (600, 200), color=(255, 240, 245))
+            # Tạo hình nền trắng
+            base = Image.new("RGB", (600, 200), color=(255, 255, 255))
             
             # Vẽ avatar trái (vị trí: 40, 10)
             base.paste(user_img, (40, 10), user_img)
@@ -72,18 +72,20 @@ class Profile(commands.Cog):
                 return await resp.read()
 
     def draw_heart(self, draw, x, y, size, fill, outline, width):
-        """Vẽ hình trái tim"""
-        points = []
-        for i in range(360):
-            angle = i * 0.01745
-            # Công thức vẽ trái tim
-            px = 16 * (angle - 0.5) ** 3
-            py = 13 * angle - 5 * (angle ** 2)
-            points.append((x + px * size / 20, y + py * size / 20))
+        """Vẽ hình trái tim đơn giản"""
+        # Vẽ trái tim bằng cách kết hợp 2 vòng tròn và 1 tam giác
+        # Hai vòng tròn ở trên
+        left_circle = (x - size // 2, y - size // 3, x, y + size // 3)
+        right_circle = (x, y - size // 3, x + size // 2, y + size // 3)
         
-        if len(points) > 2:
-            draw.polygon(points, fill=fill)
-            draw.line(points + [points[0]], fill=outline, width=width)
+        # Tam giác ở dưới
+        triangle = [(x - size // 2, y), (x + size // 2, y), (x, y + size)]
+        
+        # Vẽ
+        draw.ellipse(left_circle, fill=fill, outline=outline, width=width)
+        draw.ellipse(right_circle, fill=fill, outline=outline, width=width)
+        draw.polygon(triangle, fill=fill)
+        draw.line(triangle + [triangle[0]], fill=outline, width=width)
 
     async def show_profile(self, interaction: discord.Interaction):
         await interaction.response.defer()
