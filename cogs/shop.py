@@ -9,6 +9,12 @@ from utils.embeds import success_embed, error_embed, base_embed
 #  DANH SÁCH KHUNG ẢNH
 # ==============================
 FRAMES_SHOP = {
+    "frame_basic": {
+        "name": "💕 Khung Cơ Bản",
+        "price": 0,
+        "url": "https://media.tenor.com/GFJg0P5OljEAAAAC/love-couple.gif",
+        "description": "Khung mặc định cho mọi cặp đôi"
+    },
     "frame_cute": {
         "name": "🌸 Khung Dễ Thương",
         "price": 500,
@@ -404,9 +410,11 @@ class InventoryView(discord.ui.View):
             return
         
         # Hiển thị menu chọn khung
+        current_frame_name = FRAMES_SHOP.get(self.current_frame, {}).get('name', 'Không xác định')
+        
         embed = discord.Embed(
             title="🖼️ Thay Khung Ảnh Couple",
-            description=f"Khung hiện tại: **{FRAMES_SHOP.get(self.current_frame, FRAMES_SHOP['frame_basic'])['name']}**\n\n"
+            description=f"Khung hiện tại: **{current_frame_name}**\n\n"
                         "Chọn khung bạn muốn sử dụng:",
             color=0xFF69B4
         )
