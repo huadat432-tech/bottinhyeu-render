@@ -3,6 +3,9 @@ from discord.ext import commands
 from utils.file_manager import get_user, update_user
 from utils.embeds import error_embed
 import random
+from PIL import Image, ImageDraw
+import io
+import requests
 
 # Danh sách khung ảnh couple
 FRAMES_SHOP = {
@@ -10,37 +13,43 @@ FRAMES_SHOP = {
         "name": "💕 Khung Cơ Bản",
         "price": 0,
         "url": "https://media.tenor.com/GFJg0P5OljEAAAAC/love-couple.gif",
-        "description": "Khung mặc định cho mọi cặp đôi"
+        "description": "Khung mặc định cho mọi cặp đôi",
+        "color": "#FFB6C1"
     },
     "frame_cute": {
         "name": "🌸 Khung Dễ Thương",
         "price": 500,
         "url": "https://media.tenor.com/ExlcsKkFAtUAAAAC/cute-anime-couple.gif",
-        "description": "Khung anime couple siêu đáng yêu"
+        "description": "Khung anime couple siêu đáng yêu",
+        "color": "#FFD700"
     },
     "frame_romantic": {
         "name": "💖 Khung Lãng Mạn",
         "price": 1000,
         "url": "https://media.tenor.com/KSH5iQ2KzfwAAAAC/anime-couple-love.gif",
-        "description": "Khung tình yêu lãng mạn ngọt ngào"
+        "description": "Khung tình yêu lãng mạn ngọt ngào",
+        "color": "#FF1493"
     },
     "frame_luxury": {
         "name": "💎 Khung Sang Trọng",
         "price": 2000,
         "url": "https://media.tenor.com/kcR14mcX2nUAAAAC/anime-couple.gif",
-        "description": "Khung cao cấp dành cho đôi VIP"
+        "description": "Khung cao cấp dành cho đôi VIP",
+        "color": "#FFD700"
     },
     "frame_sakura": {
         "name": "🌸 Khung Hoa Anh Đào",
         "price": 1500,
         "url": "https://media.tenor.com/7vKQH_RgC9AAAAAC/anime-couple-kiss.gif",
-        "description": "Khung mùa xuân lãng mạn Nhật Bản"
+        "description": "Khung mùa xuân lãng mạn Nhật Bản",
+        "color": "#FFB6C1"
     },
     "frame_starry": {
         "name": "⭐ Khung Đêm Sao",
         "price": 1800,
         "url": "https://media.tenor.com/dZW9JqH0JAYAAAAC/anime-couple-love.gif",
-        "description": "Khung đêm đầy sao cho couple mơ mộng"
+        "description": "Khung đêm đầy sao cho couple mơ mộng",
+        "color": "#4169E1"
     }
 }
 
@@ -83,98 +92,196 @@ class Profile(commands.Cog):
         partner_member = interaction.guild.get_member(partner_id)
         user_member = interaction.guild.get_member(interaction.user.id)
 
-        # Lấy khung ảnh đang dùng (mặc định là frame_basic)
+        # Lấy khung ảnh đang dùng
         current_frame = user_data.get("current_frame", "frame_basic")
-        frame_url = FRAMES_SHOP.get(current_frame, FRAMES_SHOP["frame_basic"])["url"]
-        frame_name = FRAMES_SHOP.get(current_frame, FRAMES_SHOP["frame_basic"])["name"]
+        frame_data = FRAMES_SHOP.get(current_frame, FRAMES_SHOP["frame_basic"])
+        frame_name = frame_data["name"]
+        frame_color = frame_data.get("color", "#FFB6C1")
 
         # Trạng thái mối quan hệ
         if user_data.get("married"):
-            status = "💍 **Đã kết hôn**"
-            status_icon = "💍"
+            status = "💍 Đã kết hôn"
         else:
-            status = "💘 **Đang hẹn hò**"
-            status_icon = "💘"
+            status = "💘 Đang hẹn hò"
 
-        # Tính cấp độ tình yêu dựa trên điểm thân mật
+        # Tính cấp độ tình yêu
         intimacy = user_data.get("intimacy", 0)
-        level = intimacy // 100 + 1  # Mỗi 100 điểm = 1 level
-        progress = intimacy % 100  # Tiến trình đến level tiếp theo
+        level = intimacy // 100 + 1
+        progress = intimacy % 100
 
         # Tạo thanh progress bar
         progress_bar = self.create_progress_bar(progress, 100)
 
-        # Tạo Embed đẹp
-        embed = discord.Embed(
-            title=f"{status_icon} HỒ SƠ CẶP ĐÔI {status_icon}",
-            description=f"💖 **{user_member.name}** ❤️ **{partner_member.name}** 💖",
-            color=0xFF1493
-        )
-
-        # Thông tin couple
-        embed.add_field(
-            name="💞 Cấp độ tình yêu",
-            value=f"**Level {level}** ⭐\n{progress_bar} {progress}/100",
-            inline=False
-        )
-
-        embed.add_field(
-            name="💓 Điểm thân mật",
-            value=f"**{intimacy}** điểm",
-            inline=True
-        )
-
-        embed.add_field(
-            name="📜 Trạng thái",
-            value=status,
-            inline=True
-        )
-
-        embed.add_field(
-            name="🖼️ Khung hiện tại",
-            value=frame_name,
-            inline=True
-        )
-
-        # Tài sản của 2 người
-        embed.add_field(
-            name=f"💰 Xu của {user_member.name}",
-            value=f"{user_data.get('xu', 0)} xu",
-            inline=True
-        )
-
-        embed.add_field(
-            name=f"💰 Xu của {partner_member.name}",
-            value=f"{partner_data.get('xu', 0)} xu",
-            inline=True
-        )
-
-        # Số quà đã tặng nhau (nếu có tracking)
-        gifts_given = user_data.get("gifts_given", 0)
-        embed.add_field(
-            name="🎁 Quà đã tặng",
-            value=f"{gifts_given} món",
-            inline=True
-        )
-
-        # Set khung ảnh
-        embed.set_image(url=frame_url)
-        
-        # Ảnh đại diện 2 người
-        if user_member.avatar and partner_member.avatar:
-            embed.set_thumbnail(url=user_member.avatar.url)
-            embed.set_author(
-                name=f"{user_member.name} 💕 {partner_member.name}",
-                icon_url=partner_member.avatar.url
+        # Download ảnh avatar
+        try:
+            user_avatar_url = user_member.avatar.url if user_member and user_member.avatar else None
+            partner_avatar_url = partner_member.avatar.url if partner_member and partner_member.avatar else None
+            
+            # Tạo ảnh profile với khung
+            profile_image = await self.create_profile_image(
+                user_avatar_url, 
+                partner_avatar_url,
+                user_member.name if user_member else "User",
+                partner_member.name if partner_member else "Partner",
+                status,
+                intimacy,
+                frame_color
+            )
+            
+            file = discord.File(profile_image, filename="profile.png")
+            
+            # Tạo embed
+            embed = discord.Embed(
+                title=f"💖 HỒ SƠ CẶP ĐÔI 💖",
+                color=0xFF1493
+            )
+            
+            embed.set_image(url="attachment://profile.png")
+            
+            # Thông tin chi tiết
+            embed.add_field(
+                name="💞 Cấp độ tình yêu",
+                value=f"**Level {level}** ⭐\n{progress_bar} {progress}/100",
+                inline=False
             )
 
-        embed.set_footer(text="💗 Tình yêu là điều kỳ diệu nhất 💗")
+            embed.add_field(
+                name="💓 Điểm thân mật",
+                value=f"**{intimacy}** điểm",
+                inline=True
+            )
 
-        # Gửi message (dùng followup vì đã defer)
-        if interaction.response.is_done():
-            await interaction.followup.send(embed=embed, ephemeral=False)
-        else:
-            await interaction.response.send_message(embed=embed, ephemeral=False)
+            embed.add_field(
+                name="🖼️ Khung hiện tại",
+                value=frame_name,
+                inline=True
+            )
+
+            embed.add_field(
+                name=f"💰 Xu của {user_member.name if user_member else 'Bạn'}",
+                value=f"{user_data.get('xu', 0)} xu",
+                inline=True
+            )
+
+            embed.add_field(
+                name=f"💰 Xu của {partner_member.name if partner_member else 'Partner'}",
+                value=f"{partner_data.get('xu', 0)} xu",
+                inline=True
+            )
+
+            gifts_given = user_data.get("gifts_given", 0)
+            embed.add_field(
+                name="🎁 Quà đã tặng",
+                value=f"{gifts_given} món",
+                inline=True
+            )
+
+            embed.set_footer(text="💗 Tình yêu là điều kỳ diệu nhất 💗")
+
+            # Gửi message
+            if interaction.response.is_done():
+                await interaction.followup.send(embed=embed, file=file, ephemeral=False)
+            else:
+                await interaction.response.send_message(embed=embed, file=file, ephemeral=False)
+                
+        except Exception as e:
+            print(f"❌ Lỗi tạo ảnh profile: {e}")
+            await interaction.followup.send(
+                embed=error_embed(f"❌ Lỗi hiển thị profile: {str(e)}"),
+                ephemeral=True
+            )
+
+    async def create_profile_image(self, user_avatar_url, partner_avatar_url, user_name, partner_name, status, intimacy, frame_color):
+        """Tạo ảnh profile với 2 avatar và khung"""
+        # Kích thước canvas
+        width, height = 800, 400
+        img = Image.new('RGB', (width, height), color=(255, 255, 255))
+        draw = ImageDraw.Draw(img)
+        
+        # Màu khung từ hex
+        try:
+            frame_rgb = tuple(int(frame_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+        except:
+            frame_rgb = (255, 182, 193)  # Default pink
+        
+        # Tải avatar
+        try:
+            user_avatar = Image.open(io.BytesIO(requests.get(user_avatar_url, timeout=5).content)).convert('RGBA')
+            user_avatar = user_avatar.resize((150, 150), Image.Resampling.LANCZOS)
+        except:
+            user_avatar = Image.new('RGBA', (150, 150), (200, 200, 200))
+        
+        try:
+            partner_avatar = Image.open(io.BytesIO(requests.get(partner_avatar_url, timeout=5).content)).convert('RGBA')
+            partner_avatar = partner_avatar.resize((150, 150), Image.Resampling.LANCZOS)
+        except:
+            partner_avatar = Image.new('RGBA', (150, 150), (200, 200, 200))
+        
+        # Tạo avatar tròn với khung
+        user_avatar_with_frame = self.create_circular_avatar(user_avatar, frame_rgb, border_width=8)
+        partner_avatar_with_frame = self.create_circular_avatar(partner_avatar, frame_rgb, border_width=8)
+        
+        # Đặt vị trí avatar
+        user_x, user_y = 100, 125
+        partner_x, partner_y = 550, 125
+        
+        img.paste(user_avatar_with_frame, (user_x, user_y), user_avatar_with_frame)
+        img.paste(partner_avatar_with_frame, (partner_x, partner_y), partner_avatar_with_frame)
+        
+        # Vẽ trái tim ở giữa
+        heart_x, heart_y = width // 2, 180
+        heart_emoji = "💖"
+        
+        # Vì PIL không hỗ trợ emoji tốt, dùng text
+        draw.text((heart_x - 20, heart_y - 20), "💖", fill=frame_rgb)
+        
+        # Vẽ tên
+        try:
+            from PIL import ImageFont
+            font_large = ImageFont.load_default()
+        except:
+            font_large = ImageFont.load_default()
+        
+        # Tên người dùng - trái
+        draw.text((user_x + 10, user_y + 160), user_name, fill=frame_rgb)
+        
+        # Tên partner - phải
+        draw.text((partner_x + 10, partner_y + 160), partner_name, fill=frame_rgb)
+        
+        # Trạng thái ở dưới trái tim
+        draw.text((heart_x - 30, heart_y + 30), status, fill=(100, 100, 100))
+        draw.text((heart_x - 50, heart_y + 60), f"Thân mật: {intimacy} 💕", fill=(100, 100, 100))
+        
+        # Lưu ảnh vào BytesIO
+        image_bytes = io.BytesIO()
+        img.save(image_bytes, format='PNG')
+        image_bytes.seek(0)
+        return image_bytes
+
+    def create_circular_avatar(self, avatar_img, frame_color, border_width=8):
+        """Tạo avatar tròn với khung màu"""
+        size = avatar_img.size[0]
+        total_size = size + (border_width * 2)
+        
+        # Tạo ảnh với khung
+        frame_img = Image.new('RGBA', (total_size, total_size), (255, 255, 255, 0))
+        
+        # Vẽ khung tròn
+        frame_draw = ImageDraw.Draw(frame_img)
+        frame_draw.ellipse([0, 0, total_size - 1, total_size - 1], fill=frame_color)
+        
+        # Vẽ avatar vào giữa
+        frame_img.paste(avatar_img, (border_width, border_width), avatar_img)
+        
+        # Tạo mask tròn cho avatar
+        mask = Image.new('L', (total_size, total_size), 0)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.ellipse([0, 0, total_size - 1, total_size - 1], fill=255)
+        
+        result = Image.new('RGBA', (total_size, total_size), (255, 255, 255, 0))
+        result.paste(frame_img, (0, 0), mask)
+        
+        return result
 
     def create_progress_bar(self, current, total, length=10):
         """Tạo thanh progress bar"""
@@ -198,7 +305,7 @@ class Profile(commands.Cog):
         
         embed = discord.Embed(
             title="🖼️ Thay Khung Ảnh Couple",
-            description=f"Khung hiện tại: **{FRAMES_SHOP.get(current_frame, FRAMES_SHOP['frame_basic'])['name']}**\n\n"
+            description=f"Khung hiện tại: **{FRAMES_SHOP.get(current_frame, {}).get('name', 'Không xác định')}**\n\n"
                         "Chọn khung bạn muốn sử dụng bên dưới:",
             color=0xFF69B4
         )
@@ -288,7 +395,6 @@ class FrameSelectMenu(discord.ui.Select):
                         f"Khung đã được áp dụng cho cả 2 người! 💖",
             color=0x00FF00
         )
-        embed.set_image(url=frame["url"])
         embed.set_footer(text="💕 Hãy xem hồ sơ couple để thấy khung mới!")
         
         await interaction.response.edit_message(embed=embed, view=None)
