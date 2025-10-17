@@ -6,7 +6,7 @@ import random
 from utils.file_manager import get_user, update_user, load_data, save_data
 from utils.embeds import love_embed, success_embed, error_embed
 
-# Class xử lý lời tỏ tình
+
 class SetLoveView(View):
     """View gồm nút chấp nhận / từ chối lời tỏ tình"""
     def __init__(self, lover_id, target_id):
@@ -33,17 +33,6 @@ class SetLoveView(View):
         # Cập nhật dữ liệu
         data[lover]["love_partner"] = self.target_id
         data[target]["love_partner"] = self.lover_id
-        
-        # Khởi tạo các field cần thiết
-        if "owned_frames" not in data[lover]:
-            data[lover]["owned_frames"] = ["frame_basic"]
-        if "current_frame" not in data[lover]:
-            data[lover]["current_frame"] = "frame_basic"
-        if "owned_frames" not in data[target]:
-            data[target]["owned_frames"] = ["frame_basic"]
-        if "current_frame" not in data[target]:
-            data[target]["current_frame"] = "frame_basic"
-            
         save_data(data)
 
         gif_url = "https://media.tenor.com/-bT34mCszlUAAAAd/hearts-love.gif"
@@ -65,7 +54,7 @@ class SetLoveView(View):
         embed.set_image(url=gif_url)
         await interaction.response.edit_message(embed=embed, view=None)
 
-# Class xử lý chia tay
+
 class BreakUpView(View):
     """View gồm nút đồng ý chia tay / suy nghĩ lại"""
     def __init__(self, lover_id, partner_id):
@@ -83,17 +72,9 @@ class BreakUpView(View):
         lover = str(self.lover_id)
         partner = str(self.partner_id)
 
-        # Xóa người yêu và reset trạng thái
+        # Xóa người yêu
         data[lover]["love_partner"] = None
-        data[lover]["married"] = False
-        data[lover]["intimacy"] = 0
-        data[lover]["gifts_given"] = 0
-        
         data[partner]["love_partner"] = None
-        data[partner]["married"] = False
-        data[partner]["intimacy"] = 0
-        data[partner]["gifts_given"] = 0
-        
         save_data(data)
 
         gif_url = "https://media.tenor.com/XF3b4dyWj9sAAAAC/broken-heart.gif"
@@ -112,57 +93,9 @@ class BreakUpView(View):
 
         await interaction.response.send_message("💖 Quyết định chưa được thực hiện. Hãy suy nghĩ kỹ trước khi chia tay!", ephemeral=True)
 
-# Class xử lý kết hôn
-class MarryView(View):
-    """View kết hôn"""
-    def __init__(self, proposer_id, partner_id):
-        super().__init__(timeout=60)
-        self.proposer_id = proposer_id
-        self.partner_id = partner_id
 
-    @discord.ui.button(label="💍 Đồng ý kết hôn", style=discord.ButtonStyle.success)
-    async def accept_marry(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.partner_id:
-            await interaction.response.send_message("❌ Bạn không phải người được cầu hôn!", ephemeral=True)
-            return
-
-        data = load_data()
-        proposer = str(self.proposer_id)
-        partner = str(self.partner_id)
-
-        # Kiểm tra điều kiện kết hôn (ví dụ: cần ít nhất 500 điểm thân mật)
-        if data[proposer]["intimacy"] < 500:
-            await interaction.response.send_message(
-                embed=error_embed("💔 Cần ít nhất **500 điểm thân mật** để kết hôn!"),
-                ephemeral=True
-            )
-            return
-
-        # Cập nhật trạng thái kết hôn
-        data[proposer]["married"] = True
-        data[partner]["married"] = True
-        save_data(data)
-
-        gif_url = "https://media.tenor.com/9aw3kVjZEeYAAAAC/wedding-marriage.gif"
-        desc = f"💍 **<@{self.proposer_id}>** và **<@{self.partner_id}>** đã chính thức kết hôn!\n\n🎊 Chúc mừng hai bạn trăm năm hạnh phúc! 🎉"
-
-        embed = love_embed(desc)
-        embed.set_image(url=gif_url)
-        await interaction.response.edit_message(embed=embed, view=None)
-        await interaction.channel.send(f"🎊💍 Mọi người ơi! <@{self.proposer_id}> và <@{self.partner_id}> vừa kết hôn! 💍🎊")
-
-    @discord.ui.button(label="💔 Từ chối", style=discord.ButtonStyle.danger)
-    async def reject_marry(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.partner_id:
-            await interaction.response.send_message("❌ Bạn không phải người được cầu hôn!", ephemeral=True)
-            return
-
-        embed = love_embed(f"💔 **<@{self.partner_id}>** đã từ chối lời cầu hôn của **<@{self.proposer_id}>**...")
-        await interaction.response.edit_message(embed=embed, view=None)
-
-# Class Love (Tỏ tình, chia tay, kết hôn)
 class Love(commands.Cog):
-    """Xử lý tỏ tình, chấp nhận, từ chối, chia tay và kết hôn"""
+    """Xử lý tỏ tình, chấp nhận, từ chối và chia tay"""
     def __init__(self, bot):
         self.bot = bot
 
@@ -170,33 +103,78 @@ class Love(commands.Cog):
     async def on_ready(self):
         print("💌 love.py đã được load")
 
-    @commands.command(name="bzlove")
-    async def confess_love(self, ctx, target: discord.Member = None):
-        """Tỏ tình với một người nào đó"""
-        if target is None:
-            await ctx.send("❌ Bạn chưa chỉ định người tỏ tình! Ví dụ: `!bzlove @thanhvien`")
+    @commands.Cog.listener()
+    async def on_interaction(self, interaction: discord.Interaction):
+        """Xử lý khi bấm nút '💌 Tỏ tình' từ menu chính"""
+        if not interaction.data or "custom_id" not in interaction.data:
             return
-        
-        # Lấy dữ liệu người tỏ tình và người được tỏ tình
-        user_data = load_data()
-        lover_id = ctx.author.id
-        target_id = target.id
 
-        # Kiểm tra xem người tỏ tình có đang có người yêu hay không
-        if user_data.get(str(lover_id), {}).get("love_partner"):
-            await ctx.send("💔 Bạn đã có người yêu rồi, không thể tỏ tình với người khác!")
+        if interaction.data["custom_id"] == "love":
+            await self.open_love_menu(interaction)
+
+    async def open_love_menu(self, interaction: discord.Interaction):
+        """Hiển thị form tỏ tình"""
+        embed = love_embed("💌 **Nhập ID hoặc tag người bạn muốn tỏ tình** 💞\n(Ví dụ: `@User` hoặc `123456789012345678`)")
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @commands.command(name="love")
+    async def setlove_command(self, ctx, member: discord.Member = None):
+        """(Tuỳ chọn) Lệnh thủ công: bzmenu love @user"""
+        if member is None:
+            await ctx.send(embed=error_embed("Hãy tag người bạn muốn tỏ tình!"))
             return
-        
-        # Kiểm tra nếu người được tỏ tình đã có người yêu
-        if user_data.get(str(target_id), {}).get("love_partner"):
-            await ctx.send(f"💔 {target.mention} đã có người yêu rồi!")
+
+        await self.start_love(ctx, member)
+
+    async def start_love(self, ctx, member: discord.Member):
+        """Bắt đầu tỏ tình"""
+        if member.bot:
+            await ctx.send(embed=error_embed("Không thể tỏ tình với bot 😅"))
             return
-        
-        # Tạo View tỏ tình
-        view = SetLoveView(lover_id=lover_id, target_id=target_id)
-        
-        # Tạo thông điệp tỏ tình
-        embed = love_embed(f"**{ctx.author.mention}** muốn tỏ tình với **{target.mention}**! Bạn có chấp nhận không?")
+        if member.id == ctx.author.id:
+            await ctx.send(embed=error_embed("Bạn không thể tự tỏ tình với chính mình!"))
+            return
+
+        lover_data = get_user(ctx.author.id)
+        target_data = get_user(member.id)
+
+        if lover_data["love_partner"]:
+            await ctx.send(embed=error_embed("💔 Bạn đã có người yêu rồi!"))
+            return
+        if target_data["love_partner"]:
+            await ctx.send(embed=error_embed(f"💔 {member.mention} đã có người yêu mất rồi!"))
+            return
+
+        desc = f"💞 **{ctx.author.mention}** đang tỏ tình với **{member.mention}**!\n\n{member.mention}, bạn có chấp nhận lời tỏ tình này không?"
+        embed = love_embed(desc)
+
+        view = SetLoveView(ctx.author.id, member.id)
         await ctx.send(embed=embed, view=view)
 
-    # Các lệnh khác như chia tay, kết hôn sẽ xử lý theo cách tương tự
+    @commands.command(name="chiatay")
+    async def breakup_command(self, ctx, member: discord.Member = None):
+        """Lệnh thủ công chia tay: bzchiatay @user"""
+        if member is None:
+            await ctx.send(embed=error_embed("Hãy tag người bạn muốn chia tay!"))
+            return
+
+        if member.id == ctx.author.id:
+            await ctx.send(embed=error_embed("Bạn không thể chia tay chính mình!"))
+            return
+
+        lover_data = get_user(ctx.author.id)
+        target_data = get_user(member.id)
+
+        if lover_data["love_partner"] != member.id or target_data["love_partner"] != ctx.author.id:
+            await ctx.send(embed=error_embed("💔 Hai bạn không phải là một cặp đôi!"))
+            return
+
+        desc = f"💔 **{ctx.author.mention}** muốn chia tay với **{member.mention}**!\n\n{member.mention}, bạn có đồng ý không?"
+        embed = love_embed(desc)
+
+        view = BreakUpView(ctx.author.id, member.id)
+        await ctx.send(embed=embed, view=view)
+
+
+async def setup(bot):
+    await bot.add_cog(Love(bot))
