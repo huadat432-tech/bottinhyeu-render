@@ -12,37 +12,55 @@ FRAMES_SHOP = {
     "frame_basic": {
         "name": "💕 Khung Cơ Bản",
         "price": 0,
-        "url": "https://media.tenor.com/GFJg0P5OljEAAAAC/love-couple.gif",
+        "url": "images/frame_basic.png",
         "description": "Khung mặc định cho mọi cặp đôi"
+    },
+    "frame_1": {
+        "name": "🌹 Khung 1 - Tình Yêu",
+        "price": 100,
+        "url": "images/frame_1.png",
+        "description": "Khung tình yêu đơn giản"
+    },
+    "frame_2": {
+        "name": "💖 Khung 2 - Ngọt Ngào",
+        "price": 200,
+        "url": "images/frame_2.png",
+        "description": "Khung dễ thương và ngọt ngào"
+    },
+    "frame_3": {
+        "name": "✨ Khung 3 - Lộng Lẫy",
+        "price": 300,
+        "url": "images/frame_3.png",
+        "description": "Khung lộng lẫy và sang trọng"
     },
     "frame_cute": {
         "name": "🌸 Khung Dễ Thương",
         "price": 500,
-        "url": "https://media.tenor.com/ExlcsKkFAtUAAAAC/cute-anime-couple.gif",
+        "url": "images/frame_cute.png",
         "description": "Khung anime couple siêu đáng yêu"
     },
     "frame_romantic": {
         "name": "💖 Khung Lãng Mạn",
         "price": 1000,
-        "url": "https://media.tenor.com/KSH5iQ2KzfwAAAAC/anime-couple-love.gif",
+        "url": "images/frame_romantic.png",
         "description": "Khung tình yêu lãng mạn ngọt ngào"
     },
     "frame_luxury": {
         "name": "💎 Khung Sang Trọng",
         "price": 2000,
-        "url": "https://media.tenor.com/kcR14mcX2nUAAAAC/anime-couple.gif",
+        "url": "images/frame_luxury.png",
         "description": "Khung cao cấp dành cho đôi VIP"
     },
     "frame_sakura": {
         "name": "🌸 Khung Hoa Anh Đào",
         "price": 1500,
-        "url": "https://media.tenor.com/7vKQH_RgC9AAAAAC/anime-couple-kiss.gif",
+        "url": "images/frame_sakura.png",
         "description": "Khung mùa xuân lãng mạn Nhật Bản"
     },
     "frame_starry": {
         "name": "⭐ Khung Đêm Sao",
         "price": 1800,
-        "url": "https://media.tenor.com/dZW9JqH0JAYAAAAC/anime-couple-love.gif",
+        "url": "images/frame_starry.png",
         "description": "Khung đêm đầy sao cho couple mơ mộng"
     }
 }
